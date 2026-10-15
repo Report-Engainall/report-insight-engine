@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type {CanonicalField} from './canonical-schema';
 import type {FieldMapping} from './semantic-field-mapper';
 export interface ReportProfile{profileId:string;sourceSignature:string;sourceName?:string;version:number;mappings:Record<string,CanonicalField>;createdAt:string;updatedAt:string;useCount:number;}

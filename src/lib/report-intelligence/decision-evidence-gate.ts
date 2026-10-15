@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type {UnifiedDecision} from '../product-intelligence/decision-intelligence';
 import type {Anomaly} from './anomaly-engine';
 import type {EvidenceLink} from './anomaly-evidence-chain';

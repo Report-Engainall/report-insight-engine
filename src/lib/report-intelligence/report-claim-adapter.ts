@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type { CanonicalField } from './canonical-schema.js';
 import type { Claim, ClaimProvenance, ClaimStatus } from './claim-ledger.js';
 import type { ReportIntelligence } from './report-smart-insights.js';

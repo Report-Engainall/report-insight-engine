@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 export interface LedgerTransaction{key:string;date:string;debit?:number;credit?:number;reference?:string;description?:string;currency?:string;}
 export type TransactionStatus='matched'|'duplicate'|'missing_previous'|'new'|'conflict';
 export interface TransactionMatch{key:string;status:TransactionStatus;reason:string;}

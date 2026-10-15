@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 export type RowChange='new'|'changed'|'unchanged'|'duplicate'|'reversed'|'conflict';
 export interface ReportRow{rowId:string;fingerprint:string;documentNo?:string;productCode?:string;quantity?:number;amount?:number;date?:string;active?:boolean;}
 export interface RowReconciliation{rowId:string;change:RowChange;previousFingerprint?:string;reason:string;}

@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import { deriveReportIntelligence, type ReportIntelligence, type BusinessFinding, type ReportSignal, type ReportRecommendation } from './report-smart-insights.js';
 import { matchCanonicalField } from './canonical-schema.js';
 

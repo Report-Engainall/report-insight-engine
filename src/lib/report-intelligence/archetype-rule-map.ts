@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type { ArchetypeProfile } from './archetype-registry.js';
 
 export type ArchetypeRuleFamily =

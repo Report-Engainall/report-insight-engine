@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type{LedgerAmounts}from'./financial-reconciliation';
 export interface SourceLedger{name:string;currency?:string;amounts:LedgerAmounts;}
 export interface CrossSourceResult{sources:number;currencies:string[];expectedByCurrency:Record<string,number>;reportedByCurrency:Record<string,number>;differenceByCurrency:Record<string,number>;status:'balanced'|'mismatch'|'incomplete';}

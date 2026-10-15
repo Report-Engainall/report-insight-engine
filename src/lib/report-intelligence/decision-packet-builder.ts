@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type { Claim } from './claim-ledger';
 import type { BusinessQuestion } from './business-question-engine';
 

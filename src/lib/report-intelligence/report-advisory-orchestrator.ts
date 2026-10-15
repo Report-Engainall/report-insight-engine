@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type { CanonicalField } from './canonical-schema.js';
 import { evaluateBusinessQuestion, sortBusinessQuestions, type BusinessQuestion } from './business-question-engine.js';
 import { buildBusinessQuestionSet, type BusinessArchetype } from './business-question-catalog.js';

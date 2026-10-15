@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type {CanonicalField} from './canonical-schema';
 export type ReportType='inventory'|'sales'|'purchases'|'customerBalances'|'supplierBalances'|'stockMovement'|'unknown';
 const signatures:Record<ReportType,CanonicalField[]>= {inventory:['productCode','productName','currentStock'],sales:['productCode','quantity','netAmount'],purchases:['productCode','quantity','netAmount','supplierCode'],customerBalances:['customerCode','customerName','netAmount'],supplierBalances:['supplierCode','supplierName','netAmount'],stockMovement:['productCode','documentDate','quantity','warehouse'],unknown:[]};

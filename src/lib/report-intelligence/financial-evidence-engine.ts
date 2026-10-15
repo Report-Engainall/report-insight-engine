@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 export type FinancialSeverity='info'|'warning'|'critical';
 export interface FinancialEvidence{code:string;severity:FinancialSeverity;message:string;source?:string;field?:string;expected?:number;actual?:number;difference?:number;}
 export interface FinancialAnomalyInput{source:string;reported:number;expected:number;currency?:string;reference?:string;}

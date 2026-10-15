@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type {CanonicalField} from './canonical-schema';import{mapHeaders,type FieldMapping}from'./semantic-field-mapper';import{detectReportType,type ReportType}from'./report-type-detector';
 export type IngestionAction='auto_process'|'review_mapping'|'reject';
 export interface IngestionPlan{mappings:FieldMapping[];reportType:ReportType;reportConfidence:number;action:IngestionAction;reasons:string[];requiredMissing:CanonicalField[];}

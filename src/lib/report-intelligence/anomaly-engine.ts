@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 export type AnomalyKind='duplicate'|'missing'|'amount_change'|'balance_mismatch'|'period_gap'|'currency_conflict';
 export interface Anomaly{kind:AnomalyKind;severity:'low'|'medium'|'high';score:number;message:string;evidence:string[];}
 export interface AnomalyInput{duplicate?:boolean;missing?:boolean;amountDifference?:number;balanceDifference?:number;periodGapDays?:number;currencyConflict?:boolean;}

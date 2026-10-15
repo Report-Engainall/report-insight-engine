@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type{Anomaly}from'./anomaly-engine';
 export interface EvidenceLink{anomalyKind:string;source:string;field?:string;reference?:string;value?:string;confidence:number;}
 export interface AnomalyCase{caseId:string;severity:'low'|'medium'|'high';anomalies:Anomaly[];links:EvidenceLink[];status:'open'|'reviewed'|'dismissed';}

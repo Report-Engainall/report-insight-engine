@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 import type {CanonicalField} from './canonical-schema';
 import {getCanonicalFieldDefinitions,matchCanonicalField} from './canonical-schema';
 export interface FieldMapping{sourceHeader:string;field?:CanonicalField;confidence:number;method:'exact'|'alias'|'fuzzy'|'manual'|'unmapped';requiresReview:boolean;}

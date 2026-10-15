@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 export type LedgerSide='debit'|'credit';
 export type StatementEntity='customer'|'cashier'|'platform'|'exchange'|'bank'|'supplier'|'other';
 export interface ExchangeStatementField{field:string;aliases:string[];type:'identifier'|'name'|'date'|'datetime'|'currency'|'amount'|'ledger_side'|'balance'|'period'|'reference'|'contact'|'address'|'transaction_type'|'description';dynamic:boolean;required:boolean;}

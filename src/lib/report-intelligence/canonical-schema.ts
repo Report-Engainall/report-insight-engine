@@ -1,3 +1,4 @@
+// @ts-nocheck -- imported verbatim from Report-Advisor (legacy looser tsconfig); do not rewrite, wrap via src/lib/universal.
 export type CanonicalField='productCode'|'productName'|'category'|'brand'|'unit'|'warehouse'|'fromWarehouse'|'toWarehouse'|'openingBalance'|'openingStock'|'inbound'|'outbound'|'salesQty'|'purchaseQty'|'currentStock'|'adjustmentQty'|'returnQty'|'requestedQty'|'fulfilledQty'|'orderedQty'|'receivedQty'|'customerCode'|'customerName'|'supplierCode'|'supplierName'|'salesRep'|'documentNo'|'documentDate'|'transactionType'|'accountCode'|'accountName'|'quantity'|'unitPrice'|'sellingPrice'|'grossAmount'|'discount'|'netAmount'|'cost'|'profit'|'currency'|'paymentMethod'|'paymentTerms'|'paidAmount'|'targetAmount'|'dueDate'|'leadTimeDays'|'debit'|'credit'|'asset'|'liability'|'equity';
 export interface FieldDefinition{field:CanonicalField;aliases:string[];requiredFor?:string[];type:'text'|'number'|'date'|'currency';}
 const definitions:FieldDefinition[]=[
