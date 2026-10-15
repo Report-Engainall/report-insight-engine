@@ -154,7 +154,7 @@ export function buildTasks(ins: Insight[]): WorkTaskDraft[] {
 }
 
 export function businessQuestions(c: Ctx, caps: CapabilityResult[], archetypeQuestions: string[]) {
-  const av = (id: string) => ok(get(caps, id));
+  const av = (id: string) => !!ok(get(caps, id));
   const ev = (id: string, i = 0) => String(get(caps, id)?.evidence[i]?.value ?? "");
   const qs = [
     { q: "ما الحجم الإجمالي؟", answered: av("core_metrics"), a: av("core_metrics") ? ev("core_metrics", 1) || ev("core_metrics", 0) : "لا يوجد مقياس رقمي" },
