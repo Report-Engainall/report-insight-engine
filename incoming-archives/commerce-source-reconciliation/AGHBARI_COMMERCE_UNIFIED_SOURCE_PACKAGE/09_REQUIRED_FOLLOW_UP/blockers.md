@@ -1,0 +1,12 @@
+# Required follow-up — conditions for the FULL package
+
+**Current phase is BLOCKED from becoming the final unified source package by unavailable source bytes, not by a lack of repository names.**
+
+1. Make the exact original RAR available as a conversation attachment or use an authorized execution host with GitHub network download. Save original bytes unchanged, compute actual SHA-256, inspect RAR version/method, run an integrity test, extract the seven root folders into isolated paths and produce one manifest per folder. Track each failed/unreadable entry and recovery attempt; the seven names in `rar_archive_report.md` remain unverified until extracted.
+2. Materialize full Git source bytes for the four substantial snapshots and each relevant branch: canonical `main`, Report-Engainall `main` and unique feature branches, `aladnan-electronics`, and any non-identical algaradi refs. `AGHBARI_COMMERCE_UNIFIED_SOURCE_PACKAGE.zip` must not be marked complete until files themselves are included or proven unnecessary by content-level hash/diff.
+3. Enumerate relevant tags/releases/all branch commits/PR patches for both primary repos. The current package counts refs and captures active heads but does not capture every historical patch/tree. Verify exact-SHA CI for any candidate source before using proof.
+4. Resolve `Gradl1` and old `Aghbari-Technologies/aghbari-commerce` access/identity through authorized GitHub account, without bypassing visibility controls.
+5. Query the connected Lovable workspace and locate project ID `851f6f5c-d23d-45a6-9568-1452d5cfdd73`; current connected project APIs returned 404. Do not send an implementation prompt or spend credits as part of inventory only.
+6. Compare canonical specification and requirement registry contents across variants line-by-line. Preserve all requirement exceptions and decision provenance. Produce a requirement-to-source-to-implementation matrix after full content acquisition.
+7. Scan `.env` files in acquired sources without printing values, create only redacted `.env.example` files and report whether exposed secrets need revocation/rotation. The unacquired RAR is not secret-scanned.
+8. Assemble actual selected source files/patches into `02_CANONICAL_PROJECT` and `03_UNIQUE_FEATURES_AND_PATCHES`, with explicit source provenance for every selected/recovered file. Only then test extraction, code/build, migration chain, and ZIP verification. Keep unknown behaviors as unknown; don't declare production-ready from static data.

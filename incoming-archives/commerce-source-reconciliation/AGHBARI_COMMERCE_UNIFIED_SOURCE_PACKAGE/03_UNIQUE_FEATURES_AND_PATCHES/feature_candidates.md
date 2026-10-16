@@ -1,0 +1,20 @@
+# Unique feature / patch candidates — provenance-aware, not yet reconciled
+
+**Important:** The following candidates were identified from reachable repository documentation, Pull Request titles/descriptions, tree metadata and a limited number of commit diffs. They are not a code-level determination that the final implementation is complete. Before applying any one, capture both source/base contents and make a patch or diff with exact SHA provenance.
+
+| Candidate | Evidence source | Current handling | Follow-up |
+|---|---|---|---|
+| Customer invoice amounts hidden by default and exposed only through an explicit organization setting; UI/PDF/server RPC must agree | PR #72 title/description at head `905a2ebf123cd442f5aeab248297c281bfae14af` | Open PR; exact-head CI success. Not merged. | Review its 181-file patch against current main and identify unrelated changes; don't merge the entire branch on CI alone. |
+| Cart badge counts unique product lines and displays units separately | PR #72 description | Candidate in open PR | Confirm unit tests and customer UI. |
+| Disclose missing/invalid values in Onyx analytics | PR #71 head `aedfd32f5765ec5bce816dbcdb53e38ec46662d0`, open | Candidate branch, current CI not verified in this package | Compare workbook columns, blank/invalid numerics, formulas and display policy. |
+| Account statement truncation boundary shared between UI/PDF | PR #67 head `3a7257dbb243048075ee45a3c92bd8f597595fe6`, open | Candidate branch, current CI not verified here | Merge only after exact-head CI and diff review. |
+| False-success prevention for product write results | PR #48 head `5f7ac6dd2f49ff06fb73d2f917ed2273f96b25f3`, open | Candidate branch, current CI not verified here | Confirm API response and UI async error paths. |
+| Server-derived customer/catalog tier price and hiding prices in offline cache | Merged PR titles #40 and #42; source documents in canonical repo | Known architecture candidates from history, not new changes | Confirm no regression across RPC, local cache, PDF/export and assistant channels. |
+| Outbox worker retries/idempotent notifications | Merged PR #43; current source tree includes worker-related outbox code per execution records | Known candidate | Production worker deployment/delivery not proven by source or CI alone. |
+| Arabic catalog search and XLSX tabular import; import idempotency/resume | Merged PR #8 (canonical) and #7, other distinct Report branch PR #5/#6 | Candidate source features to retain | Compare both import pipelines and ensure only one shared deterministic engine is active; don't infer compatibility from feature labels. |
+| Company members/contacts, address book, checkout delivery address | Merged PRs #28, #30, #32, #33 in canonical repo | Candidate | Verify SQL grants/RLS, API operations and realistic browser flow. |
+| Customer statement precision/currency, safe invoice PDF, workbook audit/sanitization | Merged canonical PRs #34–#70 by various PRs | Candidate | Code-level comparison still needed; check exact main SHA CI and live route behavior separately. |
+| Integrated private-first AI assistant and tenant scoped audit/outbox signals | Report `PROJECT_MEMORY.md`, branch `feat/integrated-ai-assistant` and canonical AI gateway PRs | Distinct evidence to preserve | The source memory says it should not be described as a fully configured generative LLM or full audit of all app activity. Confirm model/provider config and redaction paths. |
+| UI screenshots/reference index and backup workflows | Report tree contains `docs/ui-reference/` and backup-related workflows; canonical tree has different structure | Unique assets/workflows need content access | Preserve image originals; group duplicate screenshot implementations by family, not simply deleting evidence files. |
+
+No raw patch files were included in this partial package because the repository files/diffs could not be assembled locally as verified source artifacts. No candidate is marked COMPLETE from title or metadata alone.

@@ -1,0 +1,24 @@
+﻿repository,ref,path,github_git_blob_object_id_sha1,size_bytes_if_captured,purpose_or_note
+Aghbari-Technologies/aghbari-commerce-evolved,main,AGENTS.md,0796f4159a32bc761720eb2d63825a5604c35903,4024,Instruction/architecture source; blob SHA-1 from GitHub tree
+Aghbari-Technologies/aghbari-commerce-evolved,main,PROJECT_MEMORY.md,d81c0781e836c86d6c182db9a041a8a4e7a48b86,11036,"Project rules, current scope and constraints"
+Aghbari-Technologies/aghbari-commerce-evolved,main,README.md,b0fda8f8072565ec560a1ac70eb4f64983a7bf1d,2709,Project overview and local start commands
+Aghbari-Technologies/aghbari-commerce-evolved,main,ops/AGHBARI-LATEST-EXECUTION-STATE.md,efdaf8629586730499a9948118b7fbe40cfa869e,43577,Execution state pointer; source content too large for complete snapshot in this package
+Aghbari-Technologies/aghbari-commerce-evolved,main,docs/canonical/AGHBARI-MASTER-PROJECT-SPECIFICATION.md,d3642cee37031c5559fb51d9f24305323187cb7e,91283,Authoritative master specification referenced in project
+Aghbari-Technologies/aghbari-commerce-evolved,main,docs/canonical/AGHBARI-EXECUTION-MANDATE.md,ee35552de030505538d601343d2c450cc1997cc2,12825,Execution and safety mandate
+Aghbari-Technologies/aghbari-commerce-evolved,main,docs/canonical/AGHBARI-REQUIREMENT-REGISTRY.md,7988ba9a96024316415e0ed383de588dd26c18ac,18766,Single requirement/gap ledger
+Aghbari-Technologies/aghbari-commerce-evolved,main,ops/AGHBARI-SESSION-RESUME.md,67a605bcbbe02fb50c6eb67494056537467bd1de,14572,Resume protocol
+Aghbari-Technologies/aghbari-commerce-evolved,main,src/components/AdminPages.tsx,0106d26a15a9eedbbf7b4c149eb535a8e408c71c,62049,Admin UI source tree blob; not bundled into local source files
+Aghbari-Technologies/aghbari-commerce-evolved,main,src/components/CustomerWorkflows.tsx,c7a085418aa215c89864ffa85739b4dc15b48d54,105120,Customer/finance workflows source tree blob
+Aghbari-Technologies/aghbari-commerce-evolved,main,src/components/Storefront.tsx,3455340cac95a1ad656729296b3ea8a67eb492f3,52752,Storefront source tree blob
+Aghbari-Technologies/aghbari-commerce-evolved,main,src/lib/api.ts,825ec5fce6e1e2107d41030d869c59ca903d9f52,39962,API contracts/data layer source tree blob
+Aghbari-Technologies/aghbari-commerce-evolved,main,src/lib/unified-import.ts,7fa69c332256e1c6a3c40a14303964404324a586,43980,Unified import engine source tree blob
+Aghbari-Technologies/aghbari-commerce-evolved,main,src/components/UnifiedImportEngine.tsx,ded107c48dae6100cfbd48741dcba1c5b61246c3,37756,Import workflow UI source tree blob
+Aghbari-Technologies/aghbari-commerce-evolved,main,supabase/migrations/20261009070000_platform_spec_foundations.sql,4e61abdb9c45c92bb031514d2fa7075daf0b9a61,78512,Large Supabase migration source tree blob
+Aghbari-Technologies/aghbari-commerce-evolved,main,scripts/test-database-migrations.mjs,1140e8e10bcc64623ceac4dc325a601bef521ba0,111399,Migration acceptance test harness source tree blob
+Aghbari-Technologies/aghbari-commerce-evolved,main,bun.lock,cdc19df23605ce40bdc8c3bc97c89d77e9692bc0,207762,Dependency lock file source tree blob
+Report-Engainall/aghbari-store,main,PROJECT_MEMORY.md,c51680657da54670a37f7e3fd2ac54557c41618c,9101,Separate source snapshot memory; read during source investigation
+Report-Engainall/aghbari-store,main,README.md,9d8010b1994adcc20f55e5c3d1c90f52580f82a9,2260,Bolt-enabled app notes and source workflow
+Report-Engainall/aghbari-store,main,docs/canonical/AGHBARI-MASTER-PROJECT-SPECIFICATION.md,UNKNOWN_NOT_CAPTURED,,"Path exists in tree, but exact blob SHA/size not emitted in this run"
+adnanabderab2016-sys/aladnan-electronics,main,App.tsx,1769f806c0ef1e2deb3d38fb9498f01b86b38da2,7177,Distinct source app entry; Git blob SHA-1
+adnanabderab2016-sys/aladnan-electronics,main,src/pages/ProductsPage.tsx,055be94a3ddb65564afd829eedfbb805de83acbf,,Distinct product page blob; size not captured in summarized tree output
+adnanabderab2016-sys/aladnan-electronics,main,src/pages/InventoryPage.tsx,57caa69dbbcd65bb8be241284872872037be6c44d,,Inventory screen tree blob; size not captured here

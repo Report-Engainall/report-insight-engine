@@ -1,0 +1,8 @@
+area,source_or_scope,source_ref_or_identifier,evidence_kind,confidence,limitations
+canonical source,Aghbari-Technologies/aghbari-commerce-evolved,main@d24695209b45f2352e0ba994e1f5109d7e2afc9d,recursive tree + selected text files,high for metadata and captured texts; no local checkout,tree shows 227 files but bytes not packaged
+Report source,Report-Engainall/aghbari-store,main@df3d7dd13276910d90a7273c8ace13e9a74ee277,recursive tree + README and PROJECT_MEMORY,high for metadata and captured texts; partial content,189-file source not packaged
+Algaradi duplicate,adnanabderab2016-sys/aghbari-commerce-evolved-algaradi1,main,current tree compare exact path/blob match,high for present main tree equality,branch history not reconciled
+aladnan application,adnanabderab2016-sys/aladnan-electronics,main@99eb3fa452eb3344c4c1fd625209e20d2f7169ed,recursive tree + last commit diff,medium,all code bytes not packaged
+RAR archive,adnanabderab2016-sys/-7-,main@92fac5bdf47d9e670aa98d41a9dbec137eb72f38,GitHub file size + blob SHA-1 only,high for repository pointer/size,archive bytes and true SHA-256 unavailable; no extraction
+Lovable,project 851f6f5c-d23d-45a6-9568-1452d5cfdd73,project URL in repo docs + connector 404,current-project access test attempted; failed,not verified,source repository docs are not proof of live editor state
+User specification,uploaded attachment,نص ملصق(9).txt,verbatim file copied into package,high,copy hash recorded in package checksum manifest

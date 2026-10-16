@@ -1,0 +1,68 @@
+{
+  "snapshot_created_utc": "2026-10-16T17:19:47.242483+00:00",
+  "basis": "GitHub connector REST metadata/tree responses retrieved in this session; not a local git checkout.",
+  "repositories_requested": 9,
+  "repository_status_counts": {
+    "accessible_metadata_and_full_tree": 5,
+    "accessible_metadata_only_binary_not_downloaded": 1,
+    "accessible_metadata_empty_repository": 1,
+    "not_accessible_404_name_unconfirmed": 2
+  },
+  "known_recursive_tree_counts": {
+    "Aghbari-Technologies/aghbari-commerce-evolved": {
+      "head_sha": "d24695209b45f2352e0ba994e1f5109d7e2afc9d",
+      "tree_sha": "f4b6d96183b4e626bb94f6a56cf1a7ac8f29eae3",
+      "files": 227,
+      "directories": 26,
+      "api_entries": 253,
+      "truncated": false
+    },
+    "adnanabderab2016-sys/aghbari-commerce-evolved-algaradi1": {
+      "head_sha": "d24695209b45f2352e0ba994e1f5109d7e2afc9d",
+      "files": 227,
+      "directories": 26,
+      "api_entries": 253,
+      "truncated": false,
+      "path_and_blob_match_with_canonical": 227
+    },
+    "Report-Engainall/aghbari-store": {
+      "head_sha": "df3d7dd13276910d90a7273c8ace13e9a74ee277",
+      "files": 189,
+      "directories": 24,
+      "api_entries": 213,
+      "truncated": false
+    },
+    "adnanabderab2016-sys/aladnan-electronics": {
+      "head_sha": "99eb3fa452eb3344c4c1fd625209e20d2f7169ed",
+      "files": 69,
+      "directories": 11,
+      "api_entries": 80,
+      "truncated": false
+    },
+    "adnanabderab2016-sys/aghbari-store": {
+      "head_sha": "4e3a0084bdc3123781119ac1bd9ff2768eaf209e",
+      "files": 3,
+      "directories": 0,
+      "api_entries": 3,
+      "truncated": false
+    },
+    "adnanabderab2016-sys/-7-": {
+      "head_sha": "92fac5bdf47d9e670aa98d41a9dbec137eb72f38",
+      "files": 1,
+      "directories": 0,
+      "api_entries": 1,
+      "truncated": false,
+      "archive_size_bytes": 25811682,
+      "archive_downloaded": false
+    },
+    "adnanabderab2016-sys/aghbari-commerce-evolved-algaradi": {
+      "files": 0,
+      "tree_api_error": "409 Git Repository is empty"
+    }
+  },
+  "not_accessible_names": [
+    "adnanabderab2016-sys/Gradl1",
+    "Aghbari-Technologies/aghbari-commerce"
+  ],
+  "important_limit": "A complete code+archive collection has NOT been materialized. This package is an evidence-backed partial inventory, not the fully unified source package requested."
+}

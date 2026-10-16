@@ -1,0 +1,2 @@
+PARTIAL — REPOSITORY METADATA/TREE INVENTORY ONLY FOR MOST SOURCES; RAR NOT DOWNLOADED OR EXTRACTED.
+This ZIP is deliberately not represented as the complete canonical source package requested. See 09_REQUIRED_FOLLOW_UP/blockers.md.
