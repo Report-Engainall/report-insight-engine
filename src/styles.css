@@ -140,5 +140,6 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   }
 }
