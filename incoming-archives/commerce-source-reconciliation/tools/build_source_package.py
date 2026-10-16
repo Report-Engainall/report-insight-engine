@@ -91,6 +91,7 @@ def put(root, rel, data):
     if not rel: raise ValueError("unsafe archive path")
     out=root.joinpath(*PurePosixPath(rel).parts)
     out.parent.mkdir(parents=True,exist_ok=True)
+    if isinstance(data, str): data = data.encode("utf-8")
     out.write_bytes(data)
     return out
 
@@ -436,6 +437,15 @@ def main():
       "missing_inputs.csv":"09_REQUIRED_FOLLOW_UP/missing_inputs.csv",
     }.items(): shutil.copy2(PKG/src,REPORT/name)
 
+    # This in-package manifest records the exact validation contract; actual result is written outside the ZIP after verification.
+    put(PKG,"08_PROVENANCE_AND_CHECKSUMS/ZIP_VALIDATION.json",json.dumps({
+      "scope":"ZIP integrity, entry uniqueness, independent extraction and SHA-256/size verification for all listed package payloads",
+      "execution_timing":"after archive creation",
+      "actual_result_location":"Actions run summary and adjacent package-result.json (not recursively included in the ZIP)",
+      "source_build_tests":"NOT_RUN_BY_THIS_AUDIT",
+      "no_source_repositories_modified":True
+    },ensure_ascii=False,indent=2).encode())
+
     # Write package inventory, checksums and manifest before final zip.
     def package_files():
         rows=[]
@@ -486,7 +496,6 @@ def main():
       "external_zip_assets":len(zip_inputs),"final_package_gate":ready,
       "note":"PASS is limited to ZIP integrity and SHA verification; source builds, tests, browser and production were not tested."
     }
-    put(PKG,"08_PROVENANCE_AND_CHECKSUMS/ZIP_VALIDATION.json",json.dumps(result,ensure_ascii=False,indent=2).encode())
     put(REPORT,"package-result.json",json.dumps(result,ensure_ascii=False,indent=2).encode())
     put(REPORT,"package-sha256.txt",f"{package_sha}  {package_name}\n".encode())
     put(REPORT,"audit-summary.md",note.encode())
