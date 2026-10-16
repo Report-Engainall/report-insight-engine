@@ -185,6 +185,7 @@ def main():
     inventory_dir=WORK/"source-inventory"; inventory_dir.mkdir()
     repo_rows=[]; ref_rows=[]; main_rows=[]; variants=[]; exclusions=[]
     docs=[]; tests=[]; migrations=[]; external_members=[]; external_archives=[]
+    commit_rows=[]; pull_request_rows=[]; historical_patch_rows=[]
     duplicates=[]; conflicts=[]; path_versions=defaultdict(list)
     states={}; redactions=0; variant_count=0; main_payloads=0
 
@@ -197,6 +198,16 @@ def main():
             continue
         for fetch_ref in ("+refs/pull/*/head:refs/pull/*/head","+refs/pull/*/merge:refs/pull/*/merge"):
             git(mirror,"fetch","--force","origin",fetch_ref,check=False)
+        # Query all PR states from GitHub as well as retaining the Git refs below.
+        pr_out,pr_rc,pr_err=run(["gh","pr","list","--repo",source,"--state","all","--limit","1000","--json","number,title,state,url,headRefName,headRefOid,baseRefName,baseRefOid,createdAt,updatedAt,mergedAt,isDraft"],check=False)
+        if pr_rc==0:
+            try:
+                for pr in json.loads(pr_out or "[]"):
+                    pull_request_rows.append({"repository":source,"number":pr.get("number"),"title":pr.get("title",""),"state":pr.get("state",""),"is_draft":pr.get("isDraft",""),"url":pr.get("url",""),"head_ref":pr.get("headRefName",""),"head_sha":pr.get("headRefOid",""),"base_ref":pr.get("baseRefName",""),"base_sha":pr.get("baseRefOid",""),"created_at":pr.get("createdAt",""),"updated_at":pr.get("updatedAt",""),"merged_at":pr.get("mergedAt",""),"record_status":"AVAILABLE","detail":""})
+            except Exception as ex:
+                pull_request_rows.append({"repository":source,"record_status":"PARSE_ERROR","detail":str(ex)[:300]})
+        else:
+            pull_request_rows.append({"repository":source,"record_status":"UNAVAILABLE","detail":pr_err[-500:]})
         ref_list=refs_for(mirror); ref_lookup={x["ref"]:x for x in ref_list}
         default_ref="refs/heads/main" if "refs/heads/main" in ref_lookup else ("refs/heads/master" if "refs/heads/master" in ref_lookup else next((x["ref"] for x in ref_list if x["ref_type"]=="branch"),""))
         if not default_ref:
@@ -205,6 +216,42 @@ def main():
             continue
         main_commit=ref_lookup[default_ref]["commit_sha"]; main_tree=entries(mirror,main_commit)
         states[source]={"mirror":mirror,"refs":ref_list,"default_ref":default_ref,"commit":main_commit,"files":main_tree,"slug":rs}
+        # Record every commit reachable from any fetched branch/tag/PR ref, then save its cleaned first-parent diff.
+        commit_log,_,_=git(mirror,"log","--all","--format=%H%x09%P%x09%aI%x09%cI%x09%an%x09%s")
+        source_commits=[]
+        for line in commit_log.splitlines():
+            bits=line.split("\t",5)
+            if len(bits)<6: continue
+            commit_sha,parent_shas,author_date,commit_date,author_name,subject=bits
+            row={"repository":source,"commit_sha":commit_sha,"parent_shas":parent_shas,"author_date":author_date,"commit_date":commit_date,"author_name":author_name,"subject":subject}
+            commit_rows.append(row); source_commits.append(row)
+        empty_tree="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+        for crow in source_commits:
+            parents=crow["parent_shas"].split()
+            parent=parents[0] if parents else empty_tree
+            changes=diff_names(mirror,parent,crow["commit_sha"])
+            safe_names=[]; omitted_names=[]
+            for status,changed_path in changes:
+                why=excluded(changed_path)
+                if why:
+                    exclusions.append({"repository":source,"ref":"commit:"+crow["commit_sha"],"path":changed_path,"reason":"HISTORICAL_"+why,"git_blob_sha":""})
+                    omitted_names.append(changed_path); continue
+                if not safe_path(changed_path):
+                    exclusions.append({"repository":source,"ref":"commit:"+crow["commit_sha"],"path":changed_path,"reason":"HISTORICAL_UNSAFE_PATH","git_blob_sha":""})
+                    omitted_names.append(changed_path); continue
+                safe_names.append(changed_path)
+            if not safe_names: continue
+            patch=git(mirror,"diff","--binary","--no-ext-diff",parent,crow["commit_sha"],"--",*safe_names,binary=True,check=False)[0]
+            if not patch: continue
+            cooked,why=clean_bytes(patch,"historical_commit.patch")
+            if cooked is None:
+                exclusions.append({"repository":source,"ref":"commit:"+crow["commit_sha"],"path":"<historical-commit-patch>","reason":"SECRET_PATTERN_IN_HISTORICAL_PATCH","git_blob_sha":""})
+                historical_patch_rows.append({"repository":source,"commit_sha":crow["commit_sha"],"parent_sha":parent,"changed_paths":len(changes),"captured_paths":0,"excluded_paths":len(omitted_names)+len(safe_names),"patch_sha256":"","packaged_path":"","status":"PATCH_EXCLUDED_BY_SECRET_SCANNER"})
+                continue
+            redactions+=len(why)
+            psha=sha(cooked); patch_path=f"03_UNIQUE_FEATURES_AND_PATCHES/historical-commit-patches/{rs}/{psha}.patch"
+            if not PKG.joinpath(*PurePosixPath(patch_path).parts).exists(): put(PKG,patch_path,cooked)
+            historical_patch_rows.append({"repository":source,"commit_sha":crow["commit_sha"],"parent_sha":parent,"changed_paths":len(changes),"captured_paths":len(safe_names),"excluded_paths":len(omitted_names),"patch_sha256":psha,"packaged_path":patch_path,"status":"PATCH_CAPTURED"})
         nbranch=sum(x["ref_type"]=="branch" for x in ref_list); ntag=sum(x["ref_type"]=="tag" for x in ref_list); npr=sum(x["ref_type"]=="pull_request_ref" for x in ref_list)
         for r in ref_list:
             ref_rows.append({"repository":source,"ref_type":r["ref_type"],"ref":r["ref"],"commit_sha":r["commit_sha"],"commit_date":r["commit_date"],"subject":r["subject"],"is_default_ref":str(r["ref"]==default_ref).lower()})
@@ -396,6 +443,9 @@ def main():
     headers_ex=["repository","ref","path","reason","git_blob_sha"]
     csvwrite(PKG/"01_SOURCE_INVENTORY/repositories.csv",headers_repo,repo_rows)
     csvwrite(PKG/"01_SOURCE_INVENTORY/refs.csv",headers_ref,ref_rows)
+    csvwrite(PKG/"01_SOURCE_INVENTORY/commits.csv",["repository","commit_sha","parent_shas","author_date","commit_date","author_name","subject"],commit_rows)
+    csvwrite(PKG/"01_SOURCE_INVENTORY/pull_requests.csv",["repository","number","title","state","is_draft","url","head_ref","head_sha","base_ref","base_sha","created_at","updated_at","merged_at","record_status","detail"],pull_request_rows)
+    csvwrite(PKG/"01_SOURCE_INVENTORY/historical_commit_patches.csv",["repository","commit_sha","parent_sha","changed_paths","captured_paths","excluded_paths","patch_sha256","packaged_path","status"],historical_patch_rows)
     csvwrite(PKG/"01_SOURCE_INVENTORY/main_files.csv",headers_file,main_rows)
     csvwrite(PKG/"01_SOURCE_INVENTORY/branch_variants_and_ref_diffs.csv",headers_var,variants)
     csvwrite(PKG/"01_SOURCE_INVENTORY/excluded_files.csv",headers_ex,exclusions)
@@ -468,6 +518,9 @@ def main():
       "duplicate_content_groups.csv":"01_SOURCE_INVENTORY/duplicate_content_groups.csv",
       "external_archive_inventory.csv":"01_SOURCE_INVENTORY/external_archive_inventory.csv",
       "external_archive_members.csv":"01_SOURCE_INVENTORY/external_archive_members.csv",
+      "commits.csv":"01_SOURCE_INVENTORY/commits.csv",
+      "pull_requests.csv":"01_SOURCE_INVENTORY/pull_requests.csv",
+      "historical_commit_patches.csv":"01_SOURCE_INVENTORY/historical_commit_patches.csv",
       "cross_source_path_conflicts.csv":"07_DECISIONS_AND_CONFLICTS/cross_source_path_conflicts.csv",
       "spec_documents.csv":"04_UNIFIED_SPECIFICATIONS/spec_documents.csv",
       "migration_inventory.csv":"05_DATABASE_AND_INTEGRATIONS/migration_inventory.csv",
@@ -496,6 +549,7 @@ def main():
       "package_name":package_name,"package_type":"UNIFIED_SOURCE_PACKAGE" if ready else "GITHUB_BASELINE_SNAPSHOT",
       "sources":repo_rows,"ref_counts":{"branches":branches,"tags":tags,"pull_request_refs":pullrefs},
       "main_file_records":len(main_rows),"canonical_primary_files":main_payloads,"unique_variants_added":variant_count,
+      "reachable_commits":len(commit_rows),"pull_requests_records":len(pull_request_rows),"historical_commit_patch_records":len(historical_patch_rows),
       "branch_variant_and_ref_diff_records":len(variants),"excluded_records":len(exclusions),"redaction_operations":redactions,"external_zip_assets":external_archives,
       "exact_duplicate_records":len(duplicates),"duplicate_input_archives":len(intake_duplicates),"cross_source_conflict_paths":len({x["path"] for x in conflict_rows}),
       "source_changes":"NONE; source repositories only read","source_build_tests":"NOT_RUN_BY_THIS_AUDIT"
@@ -530,6 +584,7 @@ def main():
       "zip_testzip":"PASS","duplicate_zip_entries":0,"reextract_hash_check":"PASS",
       "repositories_configured":len(SOURCES),"repositories_readable":readable,"repositories_empty":empty,"repositories_unavailable":unavailable,
       "branches":branches,"tags":tags,"pull_request_refs":pullrefs,"main_file_records":len(main_rows),"primary_files":main_payloads,
+      "reachable_commits":len(commit_rows),"pull_request_records":len(pull_request_rows),"historical_commit_patch_records":len(historical_patch_rows),
       "unique_variant_files_added":variant_count,"file_variant_and_ref_summary_rows":len(variants),"exact_duplicate_records":len(duplicates),
       "cross_source_conflict_paths":len({x["path"] for x in conflict_rows}),"exclusions":len(exclusions),"redactions":redactions,
       "external_zip_assets":len(zip_inputs),"duplicate_input_archives":len(intake_duplicates),"final_package_gate":ready,
