@@ -29,7 +29,7 @@ SECRET_PATH = re.compile(r"(^|/)(\.env|id_rsa|id_ed25519|credentials?(\.[^/]*)?|
 SECRET_PATTERNS = [
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
     re.compile(r"""(?i)(\b(?:api[_-]?key|secret[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|service[_-]?role[_-]?key|private[_-]?key|authorization)\b\s*[:=]\s*)(['"])(?!your-|test-|dummy|example|placeholder|redacted|change.?me)([^'"\r\n]{12,})(['"])"""),
-    re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|sk-[A-Za-z0-9]{24,})\b"),
+    re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|sk-[A-Za-z0-9]{24,}|(?:sk|rk)_live_[A-Za-z0-9]{16,}|eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,})\b"),
     re.compile(r"(?i)(\bBearer\s+)[A-Za-z0-9._~+/=-]{20,}"),
 ]
 blob_cache = {}
@@ -58,7 +58,9 @@ def excluded(path):
     p=PurePosixPath(path)
     if any(x.lower() in NOISE for x in p.parts): return "REGENERABLE_CACHE_OR_DEPENDENCY"
     lower=p.name.lower()
-    if lower not in {".env.example",".env.sample",".env.template"} and SECRET_PATH.search(path): return "SECRET_OR_CREDENTIAL_PATH"
+    safe_env_names={".env.example",".env.sample",".env.template"}
+    if lower not in safe_env_names and (lower==".env" or lower.startswith(".env.")): return "ENVIRONMENT_SECRET_FILE"
+    if lower not in safe_env_names and SECRET_PATH.search(path): return "SECRET_OR_CREDENTIAL_PATH"
     if lower in {"npm-debug.log","yarn-error.log","bun-debug.log"}: return "REGENERABLE_DEBUG_LOG"
     return ""
 
@@ -66,7 +68,7 @@ def clean_bytes(raw, path):
     ext=PurePosixPath(path).suffix.lower()
     is_text=(ext in TEXT_EXTS) or b"\x00" not in raw[:4096]
     if not is_text:
-        if re.search(rb"(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)",raw):
+        if re.search(rb"(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|(?:sk|rk)_live_[A-Za-z0-9]{16,}|eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)",raw):
             return None, ["SECRET_PATTERN_IN_BINARY"]
         return raw, []
     try: text=raw.decode("utf-8")
@@ -248,7 +250,7 @@ def main():
             if re.search(r"(^|/)(tests?|__tests__|e2e|fixtures?)(/|$)|\.(test|spec)\.|playwright|vitest|jest",path,re.I):
                 tests.append({"repository":source,"ref":default_ref,"path":path,"git_blob_sha":e["oid"],"kind":"MAIN_TEST_OR_FIXTURE","packaged_path":packaged})
 
-        seen_ref_versions=set()
+        seen_ref_versions={}
         for r in ref_list:
             ref,commit=r["ref"],r["commit_sha"]
             if commit==main_commit: continue
@@ -269,13 +271,18 @@ def main():
                 if ent["oid"]==main_tree.get(path,{}).get("oid"):
                     continue
                 key=(path,ent["oid"])
-                if key in seen_ref_versions: continue
+                if key in seen_ref_versions:
+                    prior=seen_ref_versions[key]
+                    raw=get_blob(mirror,ent["oid"])
+                    variants.append({"repository":source,"ref":ref,"ref_type":r["ref_type"],"commit_sha":commit,"path":path,"status_vs_source_main":status,"git_blob_sha":ent["oid"],"source_sha256":sha(raw),"packaged_sha256":prior["packaged_sha256"],"size_bytes":prior["size_bytes"],"packaged_path":prior["packaged_path"],"review_state":"EXACT_IDENTICAL_FILE_VERSION_REUSED"})
+                    continue
                 raw=get_blob(mirror,ent["oid"]); cooked,why=clean_bytes(raw,path)
                 if cooked is None:
                     exclusions.append({"repository":source,"ref":ref,"path":path,"reason":";".join(why),"git_blob_sha":ent["oid"]}); omitted+=1; continue
-                redactions+=len(why); seen_ref_versions.add(key); count_added+=1
+                redactions+=len(why); count_added+=1
                 vpath=f"03_UNIQUE_FEATURES_AND_PATCHES/ref-variants/{rs}/{slug(ref)}/{safe_path(path)}.source-{ent['oid'][:12]}"
                 put(PKG,vpath,cooked); variant_count+=1
+                seen_ref_versions[key]={"packaged_path":vpath,"packaged_sha256":sha(cooked),"size_bytes":len(cooked)}
                 variants.append({"repository":source,"ref":ref,"ref_type":r["ref_type"],"commit_sha":commit,"path":path,"status_vs_source_main":status,"git_blob_sha":ent["oid"],"source_sha256":sha(raw),"packaged_sha256":sha(cooked),"size_bytes":len(cooked),"packaged_path":vpath,"redactions":";".join(why),"review_state":"REVIEW_REQUIRED_NOT_MERGED"})
                 path_versions[path].append({"repository":source,"ref":ref,"git_blob_sha":ent["oid"],"sha256":sha(raw),"packaged_path":vpath})
                 if is_doc(path):
@@ -303,6 +310,35 @@ def main():
     inbox=WORK/"intake"; inbox.mkdir(parents=True,exist_ok=True)
     _,dlrc,dlerr=run(["gh","release","download",INTAKE_TAG,"--repo",TARGET,"--dir",str(inbox),"--pattern","*.zip","--clobber"],check=False)
     zip_inputs=sorted(inbox.glob("*.zip")) if dlrc==0 else []
+    input_sources={}
+    intake_duplicates=[]
+    seen_input_hashes={}
+    unique_zip_inputs=[]
+    for zpath in zip_inputs:
+        raw=zpath.read_bytes(); raw_sha=sha(raw)
+        if raw_sha in seen_input_hashes:
+            intake_duplicates.append({"sha256":raw_sha,"source_name":zpath.name,"kept_name":seen_input_hashes[raw_sha],"source":"github_release"})
+            zpath.unlink()
+            continue
+        seen_input_hashes[raw_sha]=zpath.name
+        input_sources[zpath.name]={"ingestion_source":"github_release_asset","original_name":zpath.name,"source_path":f"release:{INTAKE_TAG}"}
+        unique_zip_inputs.append(zpath)
+    zip_inputs=unique_zip_inputs
+    intake_root=Path.cwd()/"incoming-archives/commerce-source-reconciliation"
+    if intake_root.exists():
+        for source_zip in sorted(intake_root.rglob("*.zip")):
+            # Ignore a directory symlink and never scan the generated package scratch space.
+            if source_zip.is_symlink() or not source_zip.is_file(): continue
+            raw_sha=sha(source_zip.read_bytes())
+            if raw_sha in seen_input_hashes:
+                intake_duplicates.append({"sha256":raw_sha,"source_name":source_zip.name,"kept_name":seen_input_hashes[raw_sha],"source":"repository_folder"})
+                continue
+            dest=inbox/f"folder-{raw_sha[:12]}-{slug(source_zip.name)}"
+            shutil.copy2(source_zip,dest)
+            seen_input_hashes[raw_sha]=dest.name
+            input_sources[dest.name]={"ingestion_source":"repository_folder","original_name":source_zip.name,"source_path":source_zip.relative_to(Path.cwd()).as_posix()}
+            zip_inputs.append(dest)
+    zip_inputs=sorted(zip_inputs)
     external_rows=[]; external_archives=[]; expanded_bytes=0; expanded_members=0
     def scan_zip(data, label, prefix, depth=0):
         nonlocal expanded_bytes,expanded_members,redactions
@@ -347,7 +383,8 @@ def main():
         return safe_all
     for zp in zip_inputs:
         raw=zp.read_bytes(); safe_all=scan_zip(raw,zp.name,f"10_RECEIVED_EXTERNAL_ARCHIVES/extracted/{slug(zp.stem)}")
-        external_archives.append({"name":zp.name,"sha256":sha(raw),"bytes":len(raw),"status":"EXTRACTED_WITH_SECURITY_FILTERS" if not safe_all else "EXTRACTED_AND_CONTENTS_SCANNED"})
+        source_info=input_sources.get(zp.name,{})
+        external_archives.append({"name":zp.name,"original_name":source_info.get("original_name",zp.name),"ingestion_source":source_info.get("ingestion_source","unknown"),"source_path":source_info.get("source_path",""),"sha256":sha(raw),"bytes":len(raw),"status":"EXTRACTED_WITH_SECURITY_FILTERS" if not safe_all else "EXTRACTED_AND_CONTENTS_SCANNED"})
     ready=len(zip_inputs)>=2
     package_name="AGHBARI_COMMERCE_UNIFIED_SOURCE_PACKAGE.zip" if ready else "AGHBARI_COMMERCE_GITHUB_BASELINE_SNAPSHOT.zip"
 
@@ -373,7 +410,8 @@ def main():
     csvwrite(PKG/"04_UNIFIED_SPECIFICATIONS/spec_documents.csv",["repository","ref","path","source_sha256","packaged_sha256","category","packaged_path"],docs)
     csvwrite(PKG/"05_DATABASE_AND_INTEGRATIONS/migration_inventory.csv",["repository","ref","path","git_blob_sha","source_sha256","packaged_path"],migrations)
     csvwrite(PKG/"06_TESTS_AND_QUALITY/test_inventory.csv",["repository","ref","path","git_blob_sha","kind","packaged_path"],tests)
-    csvwrite(PKG/"01_SOURCE_INVENTORY/external_archive_inventory.csv",["name","sha256","bytes","status"],external_archives)
+    csvwrite(PKG/"01_SOURCE_INVENTORY/external_archive_inventory.csv",["name","original_name","ingestion_source","source_path","sha256","bytes","status"],external_archives)
+    csvwrite(PKG/"01_SOURCE_INVENTORY/external_archive_duplicates.csv",["sha256","source_name","kept_name","source"],intake_duplicates)
     csvwrite(PKG/"01_SOURCE_INVENTORY/external_archive_members.csv",["source_archive","member_path","status","reason","sha256","bytes","packaged_path","packaged_sha256"],external_rows)
     missing=[
       {"input":"AGHBARI_COMMERCE_UNIFIED_SOURCE_PACKAGE.zip","status":"RECEIVED" if any(x["name"].lower()=="aghbari_commerce_unified_source_package.zip" for x in external_archives) else "MISSING","evidence":"The intake README records the older link as HTTP 410 Gone; reattach the archive to the intake Release if it is needed."},
@@ -458,8 +496,8 @@ def main():
       "package_name":package_name,"package_type":"UNIFIED_SOURCE_PACKAGE" if ready else "GITHUB_BASELINE_SNAPSHOT",
       "sources":repo_rows,"ref_counts":{"branches":branches,"tags":tags,"pull_request_refs":pullrefs},
       "main_file_records":len(main_rows),"canonical_primary_files":main_payloads,"unique_variants_added":variant_count,
-      "excluded_records":len(exclusions),"redaction_operations":redactions,"external_zip_assets":external_archives,
-      "exact_duplicate_records":len(duplicates),"cross_source_conflict_paths":len({x["path"] for x in conflict_rows}),
+      "branch_variant_and_ref_diff_records":len(variants),"excluded_records":len(exclusions),"redaction_operations":redactions,"external_zip_assets":external_archives,
+      "exact_duplicate_records":len(duplicates),"duplicate_input_archives":len(intake_duplicates),"cross_source_conflict_paths":len({x["path"] for x in conflict_rows}),
       "source_changes":"NONE; source repositories only read","source_build_tests":"NOT_RUN_BY_THIS_AUDIT"
     }
     put(PKG,"08_PROVENANCE_AND_CHECKSUMS/package_manifest.json",json.dumps(manifest,ensure_ascii=False,indent=2).encode())
@@ -492,8 +530,9 @@ def main():
       "zip_testzip":"PASS","duplicate_zip_entries":0,"reextract_hash_check":"PASS",
       "repositories_configured":len(SOURCES),"repositories_readable":readable,"repositories_empty":empty,"repositories_unavailable":unavailable,
       "branches":branches,"tags":tags,"pull_request_refs":pullrefs,"main_file_records":len(main_rows),"primary_files":main_payloads,
-      "variant_files_and_ref_summaries":len(variants),"exclusions":len(exclusions),"redactions":redactions,
-      "external_zip_assets":len(zip_inputs),"final_package_gate":ready,
+      "unique_variant_files_added":variant_count,"file_variant_and_ref_summary_rows":len(variants),"exact_duplicate_records":len(duplicates),
+      "cross_source_conflict_paths":len({x["path"] for x in conflict_rows}),"exclusions":len(exclusions),"redactions":redactions,
+      "external_zip_assets":len(zip_inputs),"duplicate_input_archives":len(intake_duplicates),"final_package_gate":ready,
       "note":"PASS is limited to ZIP integrity and SHA verification; source builds, tests, browser and production were not tested."
     }
     put(REPORT,"package-result.json",json.dumps(result,ensure_ascii=False,indent=2).encode())
