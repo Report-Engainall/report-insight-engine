@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - "incoming-archives/commerce-source-reconciliation/tools/build_source_package.py"
+      - "incoming-archives/commerce-source-reconciliation/*.zip"
+      - "incoming-archives/commerce-source-reconciliation/**/*.zip"
       - ".github/workflows/commerce-source-reconciliation.yml"
   workflow_dispatch:
     inputs:
