@@ -1,0 +1,5 @@
+input,status,evidence
+AGHBARI_COMMERCE_UNIFIED_SOURCE_PACKAGE.zip,MISSING,The intake README records the older link as HTTP 410 Gone; reattach the archive to the intake Release if it is needed.
+Archive containing seven projects,PENDING,ZIP attachments downloaded from Release commerce-source-intake-2026-10-16: 0.
+Additional multi-project archive,PENDING,ZIP attachments downloaded from Release commerce-source-intake-2026-10-16: 0.
+Other platform exports not available in GitHub/Lovable,PARTIAL,Lovable project code matched the repository main SHA; no separate Bolt export was available in the intake Release.
