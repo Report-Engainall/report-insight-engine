@@ -1,8 +1,8 @@
 {
   "status": "ZIP_VERIFIED",
   "package_name": "AGHBARI_COMMERCE_GITHUB_BASELINE_SNAPSHOT.zip",
-  "package_sha256": "06b575c4a6c5d54a7084162d5416a97a1a5a750c1c51431019c68830afda85ad",
-  "package_bytes": 55677109,
+  "package_sha256": "87ad9f91dfea9aee617649888af6aa6e1d8e02b08e5c18824cbae9fd9bdaee21",
+  "package_bytes": 56543928,
   "zip_testzip": "PASS",
   "duplicate_zip_entries": 0,
   "reextract_hash_check": "PASS",
@@ -15,10 +15,14 @@
   "pull_request_refs": 102,
   "main_file_records": 1391,
   "primary_files": 227,
-  "variant_files_and_ref_summaries": 11226,
+  "unique_variant_files_added": 2064,
+  "file_variant_and_ref_summary_rows": 21493,
+  "exact_duplicate_records": 668,
+  "cross_source_conflict_paths": 211,
   "exclusions": 84,
   "redactions": 35,
   "external_zip_assets": 0,
+  "duplicate_input_archives": 0,
   "final_package_gate": false,
   "note": "PASS is limited to ZIP integrity and SHA verification; source builds, tests, browser and production were not tested."
 }
