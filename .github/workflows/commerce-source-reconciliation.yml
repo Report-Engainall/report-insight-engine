@@ -1,0 +1,99 @@
+
+name: Commerce source reconciliation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "incoming-archives/commerce-source-reconciliation/tools/build_source_package.py"
+      - ".github/workflows/commerce-source-reconciliation.yml"
+  workflow_dispatch:
+    inputs:
+      intake_release_tag:
+        description: "Release tag containing incoming ZIP archives"
+        required: false
+        default: "commerce-source-intake-2026-10-16"
+  release:
+    types: [published, edited]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: commerce-source-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  build-package:
+    if: github.event_name != 'release' || startsWith(github.event.release.tag_name, 'commerce-source-intake-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      INTAKE_RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.intake_release_tag || 'commerce-source-intake-2026-10-16' }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout intake repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Prepare Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build source snapshots and secure ZIP
+        run: python incoming-archives/commerce-source-reconciliation/tools/build_source_package.py
+      - name: Validate ZIP and publish run summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIST="$RUNNER_TEMP/commerce-source-reconciliation/dist"
+          PACKAGE="$(cat "$DIST/package-name.txt")"
+          test -s "$DIST/$PACKAGE"
+          python - "$DIST/$PACKAGE" <<'PY'
+          import sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              bad=z.testzip()
+              if bad: raise SystemExit(f"Bad ZIP member: {bad}")
+              print(f"ZIP_OK entries={len(z.namelist())}")
+          PY
+          cat "$DIST/package-result.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Save inventories under intake folder
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add incoming-archives/commerce-source-reconciliation/01_SOURCE_INVENTORY
+          if ! git diff --cached --quiet; then
+            git commit -m "audit: save commerce source reconciliation inventories"
+            git push origin HEAD:main
+          else
+            echo "Inventories unchanged; no inventory commit required."
+          fi
+      - name: Publish ZIP as a Release asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIST="$RUNNER_TEMP/commerce-source-reconciliation/dist"
+          PACKAGE="$(cat "$DIST/package-name.txt")"
+          TAG="commerce-source-reconciliation-$(date -u +%Y%m%d-%H%M%S)"
+          if [[ "$PACKAGE" == "AGHBARI_COMMERCE_UNIFIED_SOURCE_PACKAGE.zip" ]]; then
+            TITLE="Commerce Source Reconciliation — Unified Source Package"
+          else
+            TITLE="Commerce Source Reconciliation — GitHub Baseline Snapshot"
+          fi
+          gh release create "$TAG" "$DIST/$PACKAGE" --repo "$GITHUB_REPOSITORY" --title "$TITLE" --notes-file "$DIST/release-notes.md" --prerelease
+          echo "Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo "Package: $PACKAGE" >> "$GITHUB_STEP_SUMMARY"
+          echo "SHA-256: $(cut -d ' ' -f 1 "$DIST/package-sha256.txt")" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain ZIP and checksums for download
+        uses: actions/upload-artifact@v4
+        with:
+          name: commerce-source-reconciliation-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/commerce-source-reconciliation/dist/*.zip
+            ${{ runner.temp }}/commerce-source-reconciliation/dist/package-result.json
+            ${{ runner.temp }}/commerce-source-reconciliation/dist/package-sha256.txt
+          if-no-files-found: error
+          retention-days: 90
