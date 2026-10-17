@@ -1,0 +1,153 @@
+name: Audit Bolt recovery ZIPs (temporary)
+
+on:
+  push:
+    branches:
+      - recovery/audit-bolt-archives-2026-10-17
+    paths:
+      - .github/workflows/audit-bolt-recovery.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout uploaded archive repository
+        uses: actions/checkout@v6
+
+      - name: Validate, inventory, and compare the two ZIP archives without executing their contents
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, re, json, hashlib, zipfile, difflib
+          from pathlib import Path
+          from collections import Counter
+
+          base = Path("incoming-archives/nasr1-bolt-recovery-2026-10-17")
+          archives = {
+              "BEFORE_FAILURE": base / "Nasr1_Bolt_Before_Failure.zip",
+              "RESTORED_CURRENT": base / "Nasr1_Bolt_Restored_Current.zip",
+          }
+          secret_path_re = re.compile(r"(^|/)(\.env(?:\..*)?|[^/]*(secret|credential|password|private|token)[^/]*|id_rsa|id_ed25519)(/|$)", re.I)
+          secret_line_re = re.compile(r"(password|passwd|secret|api[_-]?key|private[_ -]?key|authorization\s*[:=]|bearer\s+[A-Za-z0-9._~+/-]+|service[_-]?role|access[_-]?key|BEGIN [A-Z ]*PRIVATE KEY|SUPABASE_SERVICE_ROLE|JWT_SECRET|DATABASE_URL|POSTGRES_PASSWORD)", re.I)
+          text_exts = {".ts",".tsx",".js",".jsx",".mjs",".cjs",".sql",".css",".scss",".json",".md",".mdx",".html",".htm",".yml",".yaml",".toml",".xml",".txt"}
+          code_exts = {".ts",".tsx",".js",".jsx",".mjs",".cjs",".sql",".css",".scss"}
+          def sha(data): return hashlib.sha256(data).hexdigest()
+          def redacted(text):
+              lines=[]
+              for line in text.splitlines():
+                  if secret_line_re.search(line):
+                      lines.append("[REDACTED: possible secret-bearing line]")
+                  else:
+                      lines.append(line)
+              return lines
+          def norm_paths(zf, infos):
+              names=[i.filename.replace("\\","/").strip("/") for i in infos if not i.is_dir()]
+              comps={n.split("/",1)[0] for n in names if "/" in n}
+              all_nested=bool(names) and len(comps)==1 and all("/" in n for n in names)
+              root=next(iter(comps)) if all_nested else None
+              result={}
+              dupes=[]
+              for info in infos:
+                  if info.is_dir(): continue
+                  raw=info.filename.replace("\\","/").strip("/")
+                  n=raw[len(root)+1:] if root and raw.startswith(root+"/") else raw
+                  if n in result: dupes.append(n)
+                  else:
+                      data=zf.read(info)
+                      result[n]={"sha":sha(data),"size":info.file_size,"raw":raw,"data":data}
+              return result, root, dupes
+
+          inv={}
+          for label, path in archives.items():
+              print(f"\n===== ARCHIVE {label} =====")
+              if not path.is_file():
+                  raise SystemExit(f"MISSING_ARCHIVE: {path}")
+              raw=path.read_bytes()
+              print(f"filename={path.name}")
+              print(f"compressed_bytes={len(raw)}")
+              print(f"archive_sha256={sha(raw)}")
+              try:
+                  zf=zipfile.ZipFile(path)
+              except Exception as e:
+                  raise SystemExit(f"ZIP_OPEN_FAILED: {path.name}: {type(e).__name__}: {e}")
+              with zf:
+                  bad=zf.testzip()
+                  if bad:
+                      raise SystemExit(f"ZIP_CRC_FAILURE: {path.name}: first_bad_member={bad}")
+                  infos=zf.infolist()
+                  files, root, dupes=norm_paths(zf, infos)
+                  inv[label]=files
+                  print(f"zip_integrity=PASS")
+                  print(f"member_entries={len(infos)} file_entries={len(files)} directory_entries={sum(i.is_dir() for i in infos)}")
+                  print(f"uncompressed_file_bytes={sum(x['size'] for x in files.values())}")
+                  print(f"common_single_root={root or '(none)'}")
+                  print(f"duplicate_normalized_paths={json.dumps(dupes,ensure_ascii=False)}")
+                  ext=Counter(Path(n).suffix.lower() or "[no extension]" for n in files)
+                  print("extension_counts="+json.dumps(dict(ext.most_common()),ensure_ascii=False))
+                  roots=Counter((n.split("/",1)[0] if "/" in n else "(root files)") for n in files)
+                  print("top_level_roots="+json.dumps(dict(roots.most_common(40)),ensure_ascii=False))
+                  suspicious=sorted(n for n in files if secret_path_re.search(n))
+                  print("sensitive_filename_review_required_count="+str(len(suspicious)))
+                  if suspicious:
+                      print("sensitive_filename_candidates="+json.dumps(suspicious[:80],ensure_ascii=False))
+                  nested_archives=sorted(n for n in files if Path(n).suffix.lower() in {".zip",".rar",".7z",".tar",".gz"})
+                  print("nested_archive_count="+str(len(nested_archives)))
+                  if nested_archives:
+                      print("nested_archive_paths="+json.dumps(nested_archives[:100],ensure_ascii=False))
+                  print("first_35_paths="+json.dumps(sorted(files)[:35],ensure_ascii=False))
+
+          before, current=inv["BEFORE_FAILURE"], inv["RESTORED_CURRENT"]
+          bset,cset=set(before),set(current)
+          common=bset & cset
+          same=sorted(n for n in common if before[n]["sha"]==current[n]["sha"])
+          changed=sorted(n for n in common if before[n]["sha"]!=current[n]["sha"])
+          only_before=sorted(bset-cset)
+          only_current=sorted(cset-bset)
+          print("\n===== COMPARISON SUMMARY =====")
+          print(f"before_file_count={len(before)}")
+          print(f"current_file_count={len(current)}")
+          print(f"same_path_count={len(common)}")
+          print(f"byte_identical_same_path_count={len(same)}")
+          print(f"different_content_same_path_count={len(changed)}")
+          print(f"only_in_before_failure_count={len(only_before)}")
+          print(f"only_in_restored_current_count={len(only_current)}")
+          print(f"byte_identical_same_path_percent={round(100*len(same)/len(common),2) if common else 0}")
+          print("\n--- ONLY IN BEFORE_FAILURE (potentially lost files) ---")
+          for n in only_before:
+              print(f"BEFORE_ONLY\t{n}\t{before[n]['size']} bytes\tsha256={before[n]['sha'][:16]}")
+          print("\n--- ONLY IN RESTORED_CURRENT ---")
+          for n in only_current:
+              print(f"CURRENT_ONLY\t{n}\t{current[n]['size']} bytes\tsha256={current[n]['sha'][:16]}")
+          print("\n--- COMMON PATHS WITH DIFFERENT CONTENT ---")
+          for n in changed:
+              print(f"CHANGED\t{n}\tbefore={before[n]['size']}B\tcurrent={current[n]['size']}B\tbefore_sha={before[n]['sha'][:12]}\tcurrent_sha={current[n]['sha'][:12]}")
+
+          # Inspect content-level differences for a bounded selection of ordinary text/code files.
+          # Never emit files in sensitive-name paths, and redact likely secret-bearing lines.
+          candidates=[n for n in changed if Path(n).suffix.lower() in text_exts and not secret_path_re.search(n) and before[n]["size"] <= 120000 and current[n]["size"] <= 120000]
+          candidates.sort(key=lambda n:(0 if Path(n).suffix.lower() in code_exts else 1, 0 if any(k in n.lower() for k in ("app","admin","finance","order","product","inventory","import","workflow","api","supabase","migration","task","dashboard","report")) else 1, n))
+          print("\n===== LIMITED CONTENT DIFFS (ordinary text/code only; sensitive paths excluded; secret-like lines redacted) =====")
+          total_lines=0
+          diff_files=0
+          for n in candidates:
+              if diff_files>=18 or total_lines>=900: break
+              try:
+                  a=before[n]["data"].decode("utf-8").splitlines()
+                  b=current[n]["data"].decode("utf-8").splitlines()
+              except UnicodeDecodeError:
+                  continue
+              diff=list(difflib.unified_diff(redacted(a),redacted(b),fromfile="BEFORE/"+n,tofile="CURRENT/"+n,n=2,lineterm=""))
+              if len(diff)<=4: continue
+              room=min(70,900-total_lines)
+              print("\n".join(diff[:room]))
+              if len(diff)>room: print(f"... DIFF TRUNCATED: {len(diff)-room} lines omitted for this file ...")
+              total_lines+=min(len(diff),room)
+              diff_files+=1
+          print(f"\ncontent_diff_files_printed={diff_files}")
+          print(f"content_diff_lines_printed={total_lines}")
+          print("AUDIT_SCOPE=archives inspected as data only; no project scripts executed; extracted archives were not pushed back to Nasr1.")
+          PY
