@@ -18,6 +18,9 @@ jobs:
       - name: Checkout uploaded archive repository
         uses: actions/checkout@v6
 
+      - name: Clone Nasr1 main read-only for comparison
+        run: git clone --depth 1 --no-tags https://github.com/Report-Engainall/Nasr1.git /tmp/nasr1-main
+
       - name: Validate, inventory, and compare the two ZIP archives without executing their contents
         shell: bash
         run: |
@@ -150,5 +153,58 @@ jobs:
               diff_files+=1
           print(f"\ncontent_diff_files_printed={diff_files}")
           print(f"content_diff_lines_printed={total_lines}")
+          print("\\n===== SECRET-SAFE REVIEW (NO VALUES PRINTED) =====")
+          for label, files in inv.items():
+              env=files.get(".env")
+              print(f"{label}_env_file_present={bool(env)}")
+              if env:
+                  text=env["data"].decode("utf-8",errors="replace")
+                  pairs=[]
+                  for rawline in text.splitlines():
+                      s=rawline.strip()
+                      if not s or s.startswith("#") or "=" not in s: continue
+                      k,v=s.split("=",1); k=k.strip(); v=v.strip().strip("\\\"'")
+                      if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*",k): continue
+                      if not re.search(r"(KEY|TOKEN|SECRET|PASSWORD|DATABASE_URL|SUPABASE|PRIVATE|SERVICE_ROLE|ACCESS)",k,re.I): continue
+                      status="empty" if not v else ("placeholder_or_test_value" if re.search(r"(placeholder|your[_ -]|example|changeme|replace[_ -]?me|dummy|xxxx|<[^>]+>|localhost|127\\.0\\.0\\.1)",v,re.I) else "populated_nonplaceholder")
+                      pairs.append((k,status))
+                  print(f"{label}_env_sensitive_variable_count={len(pairs)}")
+                  print(f"{label}_env_sensitive_variable_names_and_status="+json.dumps(pairs,ensure_ascii=False))
+              admin_path="supabase/migrations/20261017003200_set_admin_password_777530851.sql.sql"
+              adm=files.get(admin_path)
+              print(f"{label}_hardcoded_admin_password_named_migration_present={bool(adm)}")
+              if adm:
+                  st=adm["data"].decode("utf-8",errors="replace")
+                  patterns={
+                    "writes_auth_users":r"(?is)(UPDATE\\s+auth\\.users|INSERT\\s+INTO\\s+auth\\.users)",
+                    "references_password_field":r"(?i)(encrypted_password|password\\s*=|set\\s+password)",
+                    "contains_security_definer":r"(?i)SECURITY\\s+DEFINER",
+                    "contains_literal_secret_assignment":r"(?i)(password|secret|token|api[_-]?key)\\s*[:=]\\s*['\\\"]",
+                  }
+                  print(f"{label}_admin_migration_bytes={adm['size']} sha256={adm['sha']}")
+                  print(f"{label}_admin_migration_indicators="+json.dumps({k:bool(re.search(p,st)) for k,p in patterns.items()},ensure_ascii=False))
+                  if re.search(patterns["references_password_field"],st) or re.search(patterns["contains_literal_secret_assignment"],st):
+                      print(f"{label}_ADMIN_MIGRATION_REQUIRES_MANUAL_SECURITY_REVIEW=true")
+
+          print("\\n===== COMPARISON AGAINST NASR1 MAIN (READ ONLY) =====")
+          main_root=Path("/tmp/nasr1-main")
+          main_files={}
+          for p in main_root.rglob("*"):
+              if not p.is_file() or ".git" in p.parts: continue
+              rel=p.relative_to(main_root).as_posix()
+              try: data=p.read_bytes()
+              except Exception: continue
+              main_files[rel]={"sha":sha(data),"size":len(data)}
+          print(f"nasr1_main_file_count={len(main_files)}")
+          for label, arc in (("BEFORE_FAILURE",before),("RESTORED_CURRENT",current)):
+              keys=set(arc); mk=set(main_files); common_main=keys & mk
+              same_main=sorted(n for n in common_main if arc[n]["sha"]==main_files[n]["sha"])
+              changed_main=sorted(n for n in common_main if arc[n]["sha"]!=main_files[n]["sha"])
+              only_arc=sorted(keys-mk); only_main=sorted(mk-keys)
+              print(f"{label}_vs_NASR1_MAIN common={len(common_main)} identical={len(same_main)} different={len(changed_main)} archive_only={len(only_arc)} main_only={len(only_main)}")
+              print(f"{label}_paths_different_from_main="+json.dumps(changed_main[:100],ensure_ascii=False))
+              print(f"{label}_archive_only_paths="+json.dumps(only_arc[:80],ensure_ascii=False))
+              if label=="BEFORE_FAILURE":
+                  print(f"NASR1_MAIN_ONLY_SAMPLE="+json.dumps(only_main[:50],ensure_ascii=False))
           print("AUDIT_SCOPE=archives inspected as data only; no project scripts executed; extracted archives were not pushed back to Nasr1.")
           PY
