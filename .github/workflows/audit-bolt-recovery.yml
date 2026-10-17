@@ -38,7 +38,8 @@ jobs:
           def sha(data): return hashlib.sha256(data).hexdigest()
           def redacted(text):
               lines=[]
-              for line in text.splitlines():
+              source_lines = text if isinstance(text, list) else text.splitlines()
+              for line in source_lines:
                   if secret_line_re.search(line):
                       lines.append("[REDACTED: possible secret-bearing line]")
                   else:
