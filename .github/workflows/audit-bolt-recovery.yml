@@ -21,6 +21,61 @@ jobs:
       - name: Clone Nasr1 main read-only for comparison
         run: git clone --depth 1 --no-tags https://github.com/Report-Engainall/Nasr1.git /tmp/nasr1-main
 
+      - name: Package sanitized snapshots for detailed offline comparison
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import hashlib, json
+
+          base=Path("incoming-archives/nasr1-bolt-recovery-2026-10-17")
+          srcs={
+            "before_failure":base/"Nasr1_Bolt_Before_Failure.zip",
+            "restored_current":base/"Nasr1_Bolt_Restored_Current.zip",
+          }
+          output=Path("recovery-output")
+          output.mkdir(exist_ok=True)
+          dest=output/"nasr1-bolt-sanitized-snapshots.zip"
+          quarantine={
+            "supabase/migrations/20261017003140_grant_admin_role_777530851.sql.sql",
+            "supabase/migrations/20261017003200_set_admin_password_777530851.sql.sql",
+          }
+          manifest={"notice":"Sanitized analysis snapshots only; not a deployment bundle. No scripts were executed. Never apply SQL migrations without review.","archives":{},"excluded_sensitive_paths":[]}
+          with ZipFile(dest,"w",ZIP_DEFLATED,compresslevel=6) as out:
+            for label,path in srcs.items():
+              with ZipFile(path) as z:
+                infos=[i for i in z.infolist() if not i.is_dir()]
+                roots={i.filename.split("/",1)[0] for i in infos if "/" in i.filename}
+                strip=next(iter(roots)) if len(roots)==1 and all("/" in i.filename for i in infos) else None
+                kept=0
+                for info in infos:
+                  raw=info.filename.replace("\\\\","/").strip("/")
+                  name=raw[len(strip)+1:] if strip and raw.startswith(strip+"/") else raw
+                  lower=name.lower()
+                  if name==".env" or name.startswith(".env.") or name in quarantine:
+                    manifest["excluded_sensitive_paths"].append({"snapshot":label,"path":name,"size":info.file_size,"sha256":hashlib.sha256(z.read(info)).hexdigest()})
+                    continue
+                  data=z.read(info)
+                  out.writestr(f"{label}/{name}",data)
+                  kept+=1
+                manifest["archives"][label]={"source_archive":path.name,"files_in_original":len(infos),"files_in_sanitized_snapshot":kept}
+            manifest["quarantined_sql_note"]="The two admin-role/password-named migrations are excluded pending manual review. Their file hashes are recorded; no SQL was run."
+            out.writestr("RECOVERY_README.json",json.dumps(manifest,ensure_ascii=False,indent=2))
+          print(f"sanitized_artifact_path={dest}")
+          print(f"sanitized_artifact_bytes={dest.stat().st_size}")
+          print(f"sanitized_artifact_sha256={hashlib.sha256(dest.read_bytes()).hexdigest()}")
+          print(json.dumps(manifest,ensure_ascii=False,indent=2))
+          PY
+
+      - name: Upload sanitized snapshots for analysis
+        uses: actions/upload-artifact@v6
+        with:
+          name: nasr1-bolt-sanitized-snapshots
+          path: recovery-output/nasr1-bolt-sanitized-snapshots.zip
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Validate, inventory, and compare the two ZIP archives without executing their contents
         shell: bash
         run: |
